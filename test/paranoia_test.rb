@@ -40,7 +40,8 @@ def setup!
     'namespaced_paranoid_belongs_tos' => 'deleted_at DATETIME, paranoid_has_one_id INTEGER',
     'unparanoid_unique_models' => 'name VARCHAR(32), paranoid_with_unparanoids_id INTEGER',
     'active_column_models' => 'deleted_at DATETIME, active BOOLEAN',
-    'active_column_model_with_uniqueness_validations' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN'
+    'active_column_model_with_uniqueness_validations' => 'name VARCHAR(32), deleted_at DATETIME, active BOOLEAN',
+    'unscoped_models' => 'deleted_at DATETIME'
   }.each do |table_name, columns_as_sql_string|
     ActiveRecord::Base.connection.execute "CREATE TABLE #{table_name} (id INTEGER NOT NULL PRIMARY KEY, #{columns_as_sql_string})"
   end
@@ -260,6 +261,17 @@ class ParanoiaTest < test_framework
     assert_equal 1, model.class.unscoped.count
     assert_equal 0, model.class.only_deleted.count
     assert_equal 0, model.class.deleted.count
+  end
+
+  def test_scoping_behaviour_for_unscoped_model
+    model = UnscopedModel.create!
+    model.destroy
+
+    assert model.paranoia_destroyed?
+
+    assert_equal 1, model.class.count
+    assert_equal 0, model.class.where("deleted_at IS NULL").count
+    assert model.class.exists?(id: model.id)
   end
 
   def test_destroy_behavior_for_featureful_paranoid_models
@@ -1166,6 +1178,10 @@ end
 class PolymorphicModel < ActiveRecord::Base
   acts_as_paranoid
   belongs_to :parent, polymorphic: true
+end
+
+class UnscopedModel < ActiveRecord::Base
+  acts_as_paranoid apply_default_scope: false
 end
 
 module Namespaced

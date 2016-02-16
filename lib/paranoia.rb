@@ -219,7 +219,11 @@ class ActiveRecord::Base
     def self.paranoia_scope
       where(paranoia_column => paranoia_sentinel_value)
     end
-    default_scope { paranoia_scope }
+
+    apply_default_scope = options.key?(:apply_default_scope) ? options[:apply_default_scope] : true
+    if apply_default_scope
+      default_scope { paranoia_scope }
+    end
 
     before_restore {
       self.class.notify_observers(:before_restore, self) if self.class.respond_to?(:notify_observers)
